@@ -1,33 +1,29 @@
-// app/news/page.tsx
-import fs from "fs"
-import path from "path"
+
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar } from "lucide-react"
-import type { BlogPost } from "@/lib/types"
-
-function readLocalPosts(): BlogPost[] {
-  try {
-    const file = path.join(process.cwd(), "data", "posts.json")
-    const raw = fs.readFileSync(file, "utf8")
-    return JSON.parse(raw) as BlogPost[]
-  } catch {
-    return []
-  }
-}
-
-export const dynamic = "error" // enforce static-only
 
 export default function NewsPage() {
-  const posts = readLocalPosts()
-    .filter((p) => p.published)
-    .sort(
-      (a, b) =>
-        new Date(b.published_at ?? "").getTime() -
-        new Date(a.published_at ?? "").getTime()
-    )
+  const [posts, setPosts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoading(true)
+      const res = await fetch("/api/admin/posts")
+      if (res.ok) {
+        const data = await res.json()
+        setPosts(data.filter((p: any) => p.published))
+      }
+      setLoading(false)
+    }
+    fetchPosts()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,7 +45,9 @@ export default function NewsPage() {
         {/* News list */}
         <section className="py-16 md:py-24 px-6">
           <div className="container mx-auto max-w-6xl">
-            {posts.length > 0 ? (
+            {loading ? (
+              <p className="text-center text-muted-foreground">Loading...</p>
+            ) : posts && posts.length > 0 ? (
               <div className="grid md:grid-cols-3 gap-6">
                 {posts.map((post) => (
                   <Card

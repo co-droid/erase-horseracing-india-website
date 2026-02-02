@@ -1,25 +1,30 @@
 // app/map/page.tsx
-import fs from "fs"
-import path from "path"
+
+"use client"
+import { useEffect, useState } from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { DataAndMapSection } from "@/components/data-and-map-section"
 import type { Racetrack } from "@/lib/types"
 
-function readLocalRacetracks(): Racetrack[] {
-  try {
-    const file = path.join(process.cwd(), "data", "racetracks.json")
-    const raw = fs.readFileSync(file, "utf8")
-    return JSON.parse(raw) as Racetrack[]
-  } catch {
-    return []
-  }
-}
-
-export const dynamic = "error" // enforce static-only (good)
 
 export default function MapPage() {
-  const racetracks = readLocalRacetracks()
+  const [racetracks, setRacetracks] = useState<Racetrack[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRacetracks = async () => {
+      setLoading(true)
+      const res = await fetch("/api/admin/racetracks")
+      if (res.ok) {
+        const data = await res.json()
+        setRacetracks(data)
+      }
+      setLoading(false)
+    }
+    fetchRacetracks()
+  }, [])
+
   const totalDeaths = racetracks.reduce((sum, r) => sum + r.total_deaths, 0)
 
   return (
@@ -27,14 +32,17 @@ export default function MapPage() {
       <Navigation />
 
       <main>
-        <DataAndMapSection
-          totalDeaths={totalDeaths}
-          racetracks={racetracks}
-        />
+        {loading ? (
+          <div className="text-center text-muted-foreground py-12">Loading...</div>
+        ) : (
+          <DataAndMapSection
+            totalDeaths={totalDeaths}
+            racetracks={racetracks}
+          />
+        )}
       </main>
 
       <Footer />
     </div>
   )
 }
-

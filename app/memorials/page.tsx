@@ -1,31 +1,38 @@
+
+"use client"
 // app/memorials/page.tsx
-import fs from "fs"
-import path from "path"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { MemorialGrid } from "@/components/memorial-grid"
 import type { Horse } from "@/lib/types"
 
-function readLocalMemorials(): Horse[] {
-  try {
-    const file = path.join(process.cwd(), "data", "memorials.json")
-    const raw = fs.readFileSync(file, "utf8")
-    return JSON.parse(raw) as Horse[]
-  } catch {
-    return []
-  }
-}
+import { useEffect, useState } from "react"
 
-export const dynamic = "error" // enforce static-only
 
 export default function MemorialsPage() {
-  const memorials = readLocalMemorials()
-  .slice()
-  .sort((a, b) => {
-    const da = a.date_of_death ? new Date(a.date_of_death).getTime() : 0
-    const db = b.date_of_death ? new Date(b.date_of_death).getTime() : 0
-    return db - da // newest first
-  })
+  const [memorials, setMemorials] = useState<Horse[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchMemorials = async () => {
+      setLoading(true)
+      const res = await fetch("/api/admin/memorials")
+      if (res.ok) {
+        const data = await res.json()
+        setMemorials(
+          data
+            .slice()
+            .sort((a: Horse, b: Horse) => {
+              const da = a.date_of_death ? new Date(a.date_of_death).getTime() : 0
+              const db = b.date_of_death ? new Date(b.date_of_death).getTime() : 0
+              return db - da // newest first
+            })
+        )
+      }
+      setLoading(false)
+    }
+    fetchMemorials()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,20 +48,21 @@ export default function MemorialsPage() {
             <p className="text-xl text-muted-foreground">
               Each horse had a name, a story, and a life worth remembering.
             </p>
-            
             <p className="text-base text-muted-foreground">
-      Total memorials recorded:{" "}
-      <span className="font-semibold text-foreground">
-        {memorials.length}
-      </span>
-    </p>
+              Total memorials recorded: {" "}
+              <span className="font-semibold text-foreground">
+                {memorials.length}
+              </span>
+            </p>
           </div>
         </section>
 
         {/* Memorial grid */}
         <section className="py-16 md:py-24 px-6">
           <div className="container mx-auto max-w-7xl">
-            {memorials.length > 0 ? (
+            {loading ? (
+              <p className="text-center text-muted-foreground">Loading...</p>
+            ) : memorials.length > 0 ? (
               <MemorialGrid horses={memorials} />
             ) : (
               <p className="text-center text-muted-foreground">

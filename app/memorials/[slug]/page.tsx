@@ -1,62 +1,57 @@
+"use client"
 // app/memorials/[slug]/page.tsx
-import fs from "fs"
-import path from "path"
-import { notFound } from "next/navigation"
-import type { Metadata } from "next"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 
-/** Local data type — mirrors lib/types.Horse */
-type Memorial = {
-  id: string
-  name: string
-  slug: string
-  image_url?: string | null
-  date_of_birth?: string | null
-  date_of_death?: string | null
-  cause_of_death?: string | null
-  story?: string
-  racetrack_id?: string | null
-  created_at?: string
-  updated_at?: string
-}
+import { useEffect, useState } from "react"
+import { useRouter, useParams } from "next/navigation"
+import type { Horse } from "@/lib/types"
 
-function readLocalMemorials(): Memorial[] {
-  try {
-    const file = path.join(process.cwd(), "data", "memorials.json")
-    const raw = fs.readFileSync(file, "utf8")
-    return JSON.parse(raw) as Memorial[]
-  } catch (e) {
-    return []
+
+export default function MemorialPage() {
+  const [memorial, setMemorial] = useState<Horse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const params = useParams<{ slug: string }>()
+  const slug = params?.slug
+
+  useEffect(() => {
+    if (!slug) return;
+    const fetchMemorial = async () => {
+      setLoading(true)
+      const res = await fetch(`/api/admin/memorials`)
+      if (res.ok) {
+        const data = await res.json()
+        const found = data.find((m: Horse) => m.slug === slug)
+        setMemorial(found || null)
+        if (!found) router.replace("/memorials")
+      }
+      setLoading(false)
+    }
+    fetchMemorial()
+  }, [slug, router])
+
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main>
+          <div className="container mx-auto px-6 pt-6">
+            <p className="text-center text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
   }
-}
 
-type Props = {
-  params: { slug: string }
-}
-
-export async function generateStaticParams() {
-  const items = readLocalMemorials()
-  return items.map((m) => ({ slug: m.slug }))
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const mems = readLocalMemorials()
-  const item = mems.find((m) => m.slug === params.slug)
-  if (!item) return { title: "Memorial not found" }
-  return {
-    title: `${item.name} — Memorial`,
-    description: item.story?.slice(0, 160) ?? `${item.name} memorial`,
+  if (!memorial) {
+    return null
   }
-}
-
-export default function MemorialPage({ params }: Props) {
-  const mems = readLocalMemorials()
-  const memorial = mems.find((m) => m.slug === params.slug)
-  if (!memorial) notFound()
 
   return (
     <div className="min-h-screen bg-background">

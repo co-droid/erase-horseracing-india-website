@@ -14,6 +14,7 @@ import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { MemorialGrid } from "@/components/memorial-grid"
 
+<<<<<<< HEAD
 // Mock data for frontend development
 const mockHorses: Horse[] = [
   {
@@ -185,29 +186,42 @@ const mockBlogPosts: BlogPost[] = [
   },
 ]
 
+=======
+
+
+>>>>>>> upstream/feature/login-setup
 export default function HomePage() {
-  const [horses, setHorses] = useState<Horse[]>(mockHorses)
-  const [racetracks, setRacetracks] = useState<Racetrack[]>(mockRacetracks)
-  const [posts, setPosts] = useState<BlogPost[]>(mockBlogPosts)
-  const [totalDeaths, setTotalDeaths] = useState(109)
-  const [isLoading, setIsLoading] = useState(false)
+  const [horses, setHorses] = useState<Horse[]>([])
+  const [racetracks, setRacetracks] = useState<Racetrack[]>([])
+  const [posts, setPosts] = useState<BlogPost[]>([])
+  const [totalDeaths, setTotalDeaths] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Once you connect to Supabase, replace this with actual API calls:
-    // const fetchData = async () => {
-    //   try {
-    //     const { data: horsesData } = await supabase.from('horses').select('*').limit(3)
-    //     const { data: tracksData } = await supabase.from('racetracks').select('*')
-    //     const { data: postsData } = await supabase.from('blog_posts').select('*').eq('published', true).limit(3)
-    //     setHorses(horsesData || mockHorses)
-    //     setRacetracks(tracksData || mockRacetracks)
-    //     setPosts(postsData || mockBlogPosts)
-    //   } catch (error) {
-    //     console.error('[v0] Data fetch failed:', error)
-    //   }
-    // }
-    // fetchData()
-    setIsLoading(false)
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const [horsesRes, racetracksRes, postsRes] = await Promise.all([
+          fetch("/api/admin/memorials"),
+          fetch("/api/admin/racetracks"),
+          fetch("/api/admin/posts")
+        ])
+        let horsesData: Horse[] = []
+        let racetracksData: Racetrack[] = []
+        let postsData: BlogPost[] = []
+        if (horsesRes.ok) horsesData = await horsesRes.json()
+        if (racetracksRes.ok) racetracksData = await racetracksRes.json()
+        if (postsRes.ok) postsData = (await postsRes.json()).filter((p: BlogPost) => p.published)
+        setHorses(horsesData.slice(0, 3))
+        setRacetracks(racetracksData)
+        setPosts(postsData.slice(0, 3))
+        setTotalDeaths(racetracksData.reduce((sum, r) => sum + (r.total_deaths || 0), 0))
+      } catch (error) {
+        console.error('[v0] Data fetch failed:', error)
+      }
+      setIsLoading(false)
+    }
+    fetchData()
   }, [])
 
   return (

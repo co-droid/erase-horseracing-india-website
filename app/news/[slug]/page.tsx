@@ -1,85 +1,58 @@
 // app/news/[slug]/page.tsx
-import fs from "fs"
-import path from "path"
+"use client"
+import { useEffect, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, User, ArrowLeft, Share2 } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
-import type { Metadata } from "next"
 
-type Post = {
-  id: string
-  title: string
-  excerpt?: string | null
-  content: string
-  slug: string
-  image_url?: string | null
-  published: boolean
-  published_at?: string | null
-  author?: string
-  created_at?: string
-  updated_at?: string
-}
+import type { BlogPost } from "@/lib/types"
 
-/**
- * Helper: read posts from data/posts.json at build time.
- * This is intentionally synchronous (fs.readFileSync) so it works in SSG.
- */
-function readLocalPosts(): Post[] {
-  try {
-    const file = path.join(process.cwd(), "data", "posts.json")
-    const raw = fs.readFileSync(file, "utf-8")
-    return JSON.parse(raw) as Post[]
-  } catch (e) {
-    // fallback to an empty array so build doesn't crash if file missing
-    return []
+export default function NewsArticlePage() {
+  const [post, setPost] = useState<BlogPost | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([])
+  const params = useParams<{ slug: string }>()
+  const slug = params?.slug
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!slug) return;
+    const fetchPost = async () => {
+      setLoading(true)
+      const res = await fetch(`/api/admin/posts`)
+      if (res.ok) {
+        const data = await res.json()
+        const found = data.find((p: BlogPost) => p.slug === slug && p.published)
+        setPost(found || null)
+        setRelatedPosts(data.filter((p: BlogPost) => p.published && p.slug !== slug).slice(0, 3))
+        if (!found) router.replace("/news")
+      }
+      setLoading(false)
+    }
+    fetchPost()
+  }, [slug, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main>
+          <div className="container mx-auto px-6 pt-6">
+            <p className="text-center text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
   }
-}
-
-/* -----------------------------
-   Types & SSG plumbing
-   ---------------------------- */
-type Props = {
-  params: {
-    slug: string
-  }
-}
-
-export async function generateStaticParams() {
-  const posts = readLocalPosts().filter((p) => p.published)
-  return posts.map((p) => ({ slug: p.slug }))
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const posts = readLocalPosts()
-  const post = posts.find((p) => p.slug === params.slug && p.published)
-  if (!post) {
-    return { title: "Article Not Found" }
-  }
-  return {
-    title: `${post.title} – Erase Horseracing India`,
-    description: post.excerpt ?? post.content.slice(0, 160),
-  }
-}
-
-/* -----------------------------
-   Page component (static)
-   ---------------------------- */
-export default function NewsArticlePage({ params }: Props) {
-  const posts = readLocalPosts()
-  const post = posts.find((p) => p.slug === params.slug && p.published)
 
   if (!post) {
-    notFound()
+    return null
   }
-
-  // simple related posts: latest published excluding current
-  const relatedPosts = posts
-    .filter((p) => p.published && p.slug !== post!.slug)
-    .slice(0, 3)
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,23 +74,23 @@ export default function NewsArticlePage({ params }: Props) {
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <time>
-                  {post!.published_at ?? ""}
+                  {post.published_at ?? ""}
                 </time>
               </div>
               <span>•</span>
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                <span>{post!.author ?? "Erase Horseracing India"}</span>
+                <span>{post.author ?? "Erase Horseracing India"}</span>
               </div>
             </div>
 
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              {post!.title}
+              {post.title}
             </h1>
 
-            {post!.excerpt && <p className="text-xl text-muted-foreground mb-8">{post!.excerpt}</p>}
+            {post.excerpt && <p className="text-xl text-muted-foreground mb-8">{post.excerpt}</p>}
 
-            {post!.image_url && (
+            {post.image_url && (
               <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted mb-12">
                 <img src={post!.image_url} alt={post!.title} className="w-full h-full object-cover" />
               </div>
