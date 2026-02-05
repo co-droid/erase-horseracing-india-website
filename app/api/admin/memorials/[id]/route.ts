@@ -2,8 +2,9 @@ import { NextResponse, NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const body = await request.json()
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -35,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         story: body.story,
         racetrack_id: body.racetrack_id || null,
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
 
     if (error) {
@@ -49,8 +50,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,7 +73,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       }
     )
 
-    const { error } = await supabase.from("horses").delete().eq("id", params.id)
+    const { error } = await supabase.from("horses").delete().eq("id", id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })

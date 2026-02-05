@@ -28,7 +28,7 @@ export function RacetracksManager() {
     longitude: "",
     description: "",
     total_deaths: 0,
-    status: "active" as const,
+    status: "active" as "active" | "closed",
   })
 
   useEffect(() => {

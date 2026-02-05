@@ -31,6 +31,7 @@ export function PledgeForm() {
     const supabase = createClient()
 
     try {
+      // Save pledge to database
       const { error: insertError } = await supabase.from("pledges").insert({
         full_name: formData.fullName,
         email: formData.email,
@@ -40,6 +41,22 @@ export function PledgeForm() {
       })
 
       if (insertError) throw insertError
+
+      // Send confirmation email
+      const emailResponse = await fetch("/api/email/pledge-confirmation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          fullName: formData.fullName,
+        }),
+      })
+
+      if (!emailResponse.ok) {
+        console.error("Email sending failed, but pledge was recorded")
+      }
 
       setStatus("success")
       // Redirect to success page after a brief delay

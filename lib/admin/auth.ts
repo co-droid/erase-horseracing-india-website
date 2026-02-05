@@ -1,6 +1,6 @@
 // Admin authentication and authorization utilities
 import { jwtVerify } from "jose"
-import type { AdminSession, AdminRole } from "./types/admin"
+import type { AdminSession, AdminRole } from "../types/admin"
 
 const SECRET_KEY = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET || "change-me-in-production")
 

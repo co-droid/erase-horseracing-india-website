@@ -8,10 +8,11 @@ import { MemorialsManager } from "@/components/admin/managers/memorials-manager"
 import { PostsManager } from "@/components/admin/managers/posts-manager"
 import { RacetracksManager } from "@/components/admin/managers/racetracks-manager"
 import { SubmissionsViewer } from "@/components/admin/managers/submissions-viewer"
+import { PledgesViewer } from "@/components/admin/managers/pledges-viewer"
 import { DashboardOverview } from "@/components/admin/dashboard-overview"
 import type { AdminSession } from "@/lib/types/admin"
 
-type TabType = "overview" | "memorials" | "posts" | "racetracks" | "submissions"
+type TabType = "overview" | "memorials" | "posts" | "racetracks" | "submissions" | "pledges"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -71,6 +72,7 @@ export default function AdminPage() {
             {activeTab === "posts" && <PostsManager />}
             {activeTab === "racetracks" && <RacetracksManager />}
             {activeTab === "submissions" && <SubmissionsViewer />}
+            {activeTab === "pledges" && <PledgesViewer />}
           </div>
         </main>
       </div>

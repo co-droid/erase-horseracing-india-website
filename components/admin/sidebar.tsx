@@ -8,7 +8,7 @@ import { hasPermission } from "@/lib/types/admin"
 
 interface SidebarProps {
   activeTab: string
-  onTabChange: (tab: string) => void
+  onTabChange: (tab: "overview" | "memorials" | "posts" | "racetracks" | "submissions" | "pledges") => void
   adminRole: AdminRole
 }
 
@@ -19,6 +19,7 @@ export function Sidebar({ activeTab, onTabChange, adminRole }: SidebarProps) {
     { id: "posts", label: "News & Posts", icon: FileText, permission: "manage_posts" },
     { id: "racetracks", label: "Racetracks", icon: MapPin, permission: "manage_racetracks" },
     { id: "submissions", label: "Submissions", icon: Mail, permission: "view_pledges" },
+    { id: "pledges", label: "Pledges", icon: Heart, permission: "view_pledges" },
   ]
 
   return (
