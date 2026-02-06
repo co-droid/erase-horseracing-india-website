@@ -40,6 +40,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    
+    // Sanitize slug
+    const sanitizeSlug = (text: string): string => {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "")
+        .replace(/-+/g, "-")
+    }
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,10 +75,11 @@ export async function POST(request: NextRequest) {
       .from("blog_posts")
       .insert({
         title: body.title,
-        slug: body.slug,
+        slug: sanitizeSlug(body.slug),
         excerpt: body.excerpt || null,
         content: body.content,
         author: body.author,
+        image_url: body.image_url || null,
         published: body.published,
         published_at: body.published_at,
       })

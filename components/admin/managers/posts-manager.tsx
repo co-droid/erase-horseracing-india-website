@@ -26,8 +26,18 @@ export function PostsManager() {
     excerpt: "",
     content: "",
     author: "",
+    image_url: "",
     published: false,
   })
+
+  const sanitizeSlug = (text: string): string => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]/g, "")
+      .replace(/-+/g, "-")
+  }
 
   useEffect(() => {
     fetchPosts()
@@ -101,6 +111,7 @@ export function PostsManager() {
       excerpt: post.excerpt || "",
       content: post.content,
       author: post.author,
+      image_url: post.image_url || "",
       published: post.published,
     })
     setEditingId(post.id)
@@ -114,6 +125,7 @@ export function PostsManager() {
       excerpt: "",
       content: "",
       author: "",
+      image_url: "",
       published: false,
     })
     setEditingId(null)
@@ -156,7 +168,14 @@ export function PostsManager() {
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) => {
+                    const newTitle = e.target.value
+                    setFormData({ 
+                      ...formData, 
+                      title: newTitle,
+                      slug: !editingId ? sanitizeSlug(newTitle) : formData.slug
+                    })
+                  }}
                   required
                 />
               </div>
@@ -167,10 +186,11 @@ export function PostsManager() {
                   <Input
                     id="slug"
                     value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, slug: sanitizeSlug(e.target.value) })}
                     placeholder="article-url-slug"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">Auto-sanitized: spaces → hyphens, lowercase</p>
                 </div>
 
                 <div className="space-y-2">
@@ -203,6 +223,29 @@ export function PostsManager() {
                   rows={8}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image_url">Featured Image URL</Label>
+                <Input
+                  id="image_url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  type="url"
+                />
+                {formData.image_url && (
+                  <div className="mt-2 border rounded-lg overflow-hidden bg-gray-100">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-full h-40 object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">

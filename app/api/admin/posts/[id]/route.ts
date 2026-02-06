@@ -6,6 +6,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const body = await request.json()
+    
+    // Sanitize slug
+    const sanitizeSlug = (text: string): string => {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "")
+        .replace(/-+/g, "-")
+    }
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,10 +41,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       .from("blog_posts")
       .update({
         title: body.title,
-        slug: body.slug,
+        slug: sanitizeSlug(body.slug),
         excerpt: body.excerpt || null,
         content: body.content,
         author: body.author,
+        image_url: body.image_url || null,
         published: body.published,
         published_at: body.published_at,
       })

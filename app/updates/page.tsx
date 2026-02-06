@@ -13,12 +13,28 @@ import type { BlogPost } from "@/lib/types"
 export default function UpdatesPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const formatDate = (dateString: string | null | undefined) => {
+    try {
+      if (!dateString) return ""
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return dateString || ""
+    }
+  }
 
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true)
-      const res = await fetch("/api/admin/posts")
-      if (res.ok) {
+      setError(null)
+      try {
+        const res = await fetch("/api/admin/posts")
+        if (!res.ok) throw new Error("Failed to fetch posts")
         const data = await res.json()
         setPosts(
           data
@@ -29,8 +45,12 @@ export default function UpdatesPage() {
                 new Date(a.published_at ?? "").getTime()
             )
         )
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error loading posts")
+        console.error("Fetch error:", err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     fetchPosts()
   }, [])
@@ -57,6 +77,11 @@ export default function UpdatesPage() {
           <div className="container mx-auto max-w-6xl">
             {loading ? (
               <p className="text-center text-muted-foreground">Loading...</p>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 font-semibold mb-2">Error loading updates</p>
+                <p className="text-muted-foreground">{error}</p>
+              </div>
             ) : posts.length > 0 ? (
               <div className="grid md:grid-cols-3 gap-6">
                 {posts.map((post) => (
@@ -64,7 +89,7 @@ export default function UpdatesPage() {
                     key={post.id}
                     className="overflow-hidden hover:shadow-lg transition-shadow group"
                   >
-                    <Link href={`/news/${post.slug}`}>
+                    <Link href={`/updates/${post.slug}`}>
                       {post.image_url && (
                         <div className="aspect-video w-full overflow-hidden bg-muted">
                           <img
@@ -77,7 +102,7 @@ export default function UpdatesPage() {
                       <CardContent className="p-6 space-y-3">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          <time>{post.published_at ?? ""}</time>
+                          <time>{formatDate(post.published_at)}</time>
                         </div>
                         <h2 className="font-serif text-xl font-bold leading-tight group-hover:text-primary transition-colors line-clamp-2">
                           {post.title}

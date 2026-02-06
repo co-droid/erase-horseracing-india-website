@@ -1,4 +1,4 @@
-// app/news/[slug]/page.tsx
+// app/updates/[slug]/page.tsx
 "use client"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -11,7 +11,7 @@ import Link from "next/link"
 
 import type { BlogPost } from "@/lib/types"
 
-export default function NewsArticlePage() {
+export default function UpdateArticlePage() {
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([])
@@ -23,18 +23,37 @@ export default function NewsArticlePage() {
     if (!slug) return;
     const fetchPost = async () => {
       setLoading(true)
-      const res = await fetch(`/api/admin/posts`)
-      if (res.ok) {
+      try {
+        const res = await fetch(`/api/admin/posts`)
+        if (!res.ok) throw new Error("Failed to fetch post")
         const data = await res.json()
         const found = data.find((p: BlogPost) => p.slug === slug && p.published)
         setPost(found || null)
         setRelatedPosts(data.filter((p: BlogPost) => p.published && p.slug !== slug).slice(0, 3))
-        if (!found) router.replace("/news")
+        if (!found) {
+          router.replace("/updates")
+        }
+      } catch (err) {
+        console.error("Error fetching post:", err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     fetchPost()
   }, [slug, router])
+
+  const formatDate = (dateString: string | null | undefined) => {
+    try {
+      if (!dateString) return ""
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return dateString || ""
+    }
+  }
 
   if (loading) {
     return (
@@ -54,19 +73,6 @@ export default function NewsArticlePage() {
     return null
   }
 
-  const formatDate = (dateString: string | null | undefined) => {
-    try {
-      if (!dateString) return ""
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    } catch {
-      return dateString || ""
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -74,9 +80,9 @@ export default function NewsArticlePage() {
       <main>
         <div className="container mx-auto px-6 pt-6">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/news">
+            <Link href="/updates">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to News
+              Back to Updates
             </Link>
           </Button>
         </div>
@@ -125,41 +131,56 @@ export default function NewsArticlePage() {
               )}
             </div>
 
-            <div className="mt-12 pt-8 border-t flex justify-between items-center flex-wrap gap-4">
-              <div>
-                <h3 className="font-semibold">Share this article</h3>
-                <p className="text-sm text-muted-foreground">Help spread awareness about this issue</p>
+            {/* Share section */}
+            <div className="mt-12 pt-8 border-t">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div>
+                  <h3 className="font-semibold">Share this update</h3>
+                  <p className="text-sm text-muted-foreground">Help spread awareness about this issue</p>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </Button>
               </div>
-              <Button variant="outline" size="sm">
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
             </div>
           </div>
         </article>
 
+        {/* Related articles */}
         {relatedPosts.length > 0 && (
           <section className="py-12 md:py-16 px-6 bg-muted/30">
             <div className="container mx-auto max-w-6xl">
-              <h2 className="font-serif text-3xl font-bold text-foreground mb-8">Related Articles</h2>
-              <div className="grid md:grid-cols-3 gap-6">
+              <h2 className="font-serif text-3xl font-bold text-foreground mb-8">Related Updates</h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {relatedPosts.map((rp) => (
-                  <Card key={rp.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
-                    <Link href={`/news/${rp.slug}`}>
+                  <Link key={rp.id} href={`/updates/${rp.slug}`}>
+                    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 h-full flex flex-col group">
                       {rp.image_url && (
                         <div className="aspect-video w-full overflow-hidden bg-muted">
-                          <img src={rp.image_url} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          <img 
+                            src={rp.image_url} 
+                            alt={rp.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                          />
                         </div>
                       )}
-                      <CardContent className="p-6 space-y-3">
+                      <CardContent className="p-6 space-y-3 flex-1 flex flex-col">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
                           <time>{formatDate(rp.published_at)}</time>
                         </div>
-                        <h3 className="font-serif text-xl font-bold leading-tight group-hover:text-primary transition-colors line-clamp-2">{rp.title}</h3>
+                        <h3 className="font-serif text-lg font-bold leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                          {rp.title}
+                        </h3>
+                        {rp.excerpt && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                            {rp.excerpt}
+                          </p>
+                        )}
                       </CardContent>
-                    </Link>
-                  </Card>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -171,4 +192,3 @@ export default function NewsArticlePage() {
     </div>
   )
 }
-
