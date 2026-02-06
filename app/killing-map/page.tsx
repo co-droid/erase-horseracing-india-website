@@ -1,30 +1,63 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { RacetrackMapLeaflet } from "@/components/racetrack-map-leaflet"
 import { AlertTriangle } from "lucide-react"
-
-export const metadata = {
-  title: "Killing Map - Erase Horseracing India",
-  description: "Interactive map of documented deaths and injuries across Indian racing tracks.",
-}
+import type { Racetrack } from "@/lib/types"
 
 export default function KillingMapPage() {
-  const racetracks = [
-    { name: "Bangalore Turf Club", deaths: 350, lat: 13.1939, lng: 77.5941, state: "Karnataka" },
-    { name: "Mumbai Racecourse", deaths: 280, lat: 19.0176, lng: 72.8298, state: "Maharashtra" },
-    { name: "Delhi Racecourse", deaths: 210, lat: 28.5355, lng: 77.2707, state: "Delhi" },
-    { name: "Hyderabad Racecourse", deaths: 180, lat: 17.385, lng: 78.4867, state: "Telangana" },
-    { name: "Pune Racecourse", deaths: 120, lat: 18.5204, lng: 73.8567, state: "Maharashtra" },
-    { name: "Kolkata Racecourse", deaths: 95, lat: 22.5726, lng: 88.3639, state: "West Bengal" },
-  ]
+  const [racetracks, setRacetracks] = useState<Racetrack[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const maxDeaths = Math.max(...racetracks.map((t) => t.deaths))
-  const totalDeaths = racetracks.reduce((sum, t) => sum + t.deaths, 0)
+  useEffect(() => {
+    const fetchRacetracks = async () => {
+      try {
+        const res = await fetch("/api/admin/racetracks")
+        if (res.ok) {
+          const data = await res.json()
+          setRacetracks(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch racetracks:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRacetracks()
+  }, [])
+
+  const maxDeaths = racetracks.length > 0 ? Math.max(...racetracks.map((t) => t.total_deaths)) : 100
+  const totalDeaths = racetracks.reduce((sum, t) => sum + t.total_deaths, 0)
+
+  // Group racetracks by state
+  const tracksByState = racetracks.reduce(
+    (acc, track) => {
+      const state = track.state || "Unknown"
+      if (!acc[state]) {
+        acc[state] = []
+      }
+      acc[state].push(track)
+      return acc
+    },
+    {} as Record<string, Racetrack[]>
+  )
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <main>
+        {loading ? (
+          <div className="py-20 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading map data...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Hero */}
         <section className="py-20 md:py-32 px-6 bg-gradient-to-br from-destructive/5 via-transparent to-accent/5 border-b relative overflow-hidden">
           <div className="absolute inset-0 opacity-20">
@@ -53,7 +86,7 @@ export default function KillingMapPage() {
                 </div>
                 <p className="text-4xl font-bold text-destructive">{totalDeaths}+</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Across tracked facilities
+                  Across tracked facilities (from Supabase)
                 </p>
               </div>
 
@@ -62,11 +95,11 @@ export default function KillingMapPage() {
                   <div className="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <AlertTriangle className="h-6 w-6 text-accent" />
                   </div>
-                  <h3 className="font-serif text-xl font-bold">Estimated Total</h3>
+                  <h3 className="font-serif text-xl font-bold">States Affected</h3>
                 </div>
-                <p className="text-4xl font-bold text-accent">10,000+</p>
+                <p className="text-4xl font-bold text-accent">{Object.keys(tracksByState).length}</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Including unreported incidents
+                  Indian states with tracked racetracks
                 </p>
               </div>
 
@@ -75,13 +108,13 @@ export default function KillingMapPage() {
                   <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <AlertTriangle className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="font-serif text-xl font-bold">Major Tracks</h3>
+                  <h3 className="font-serif text-xl font-bold">Tracked Tracks</h3>
                 </div>
                 <p className="text-4xl font-bold text-primary">
                   {racetracks.length}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Locations documented
+                  Racetracks documented
                 </p>
               </div>
             </div>
@@ -89,86 +122,59 @@ export default function KillingMapPage() {
             {/* Map + List */}
             <div className="mb-16">
               <h2 className="font-serif text-3xl md:text-4xl font-bold mb-8 text-center">
-                Deaths by Track
+                Interactive Map - Deaths by Track
               </h2>
 
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Map */}
-                <div className="relative aspect-square rounded-2xl overflow-hidden border border-border/40 bg-muted/20 p-8">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
-                  <svg className="w-full h-full" viewBox="0 0 400 400">
-                    <path
-                      d="M 100 150 L 150 120 L 180 130 L 200 100 L 220 120 L 240 110 L 250 140 L 260 150 L 270 180 L 280 200 L 270 220 L 250 240 L 220 250 L 180 240 L 150 260 L 120 250 L 100 230 L 90 200 Z"
-                      fill="currentColor"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-muted/50"
-                    />
-
-                    {racetracks.map((track, idx) => {
-                      const r = (track.deaths / maxDeaths) * 8 + 4
-                      const x = 100 + (track.lng - 72) * 6
-                      const y = 150 + (track.lat - 13) * -4
-
-                      return (
-                        <g key={idx}>
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r={r}
-                            fill="currentColor"
-                            className="text-destructive/60"
-                          />
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r={r}
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1"
-                            className="text-destructive/40"
-                          />
-                        </g>
-                      )
-                    })}
-                  </svg>
-
-                  <div className="absolute bottom-4 left-4 right-4 text-xs text-muted-foreground">
-                    <p>Circle size = Death count</p>
-                    <p className="mt-1">
-                      Larger circles indicate higher documented deaths
-                    </p>
-                  </div>
+              <div className="grid lg:grid-cols-3 gap-8">
+                {/* Map - Takes up 2 columns on large screens */}
+                <div className="lg:col-span-2">
+                  <RacetrackMapLeaflet racetracks={racetracks} />
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Click on markers to see detailed information about each racetrack
+                  </p>
                 </div>
 
-                {/* List */}
-                <div className="space-y-4">
-                  {racetracks
-                    .sort((a, b) => b.deaths - a.deaths)
-                    .map((track, idx) => {
-                      const pct = (track.deaths / maxDeaths) * 100
+                {/* List - Grouped by State */}
+                <div className="space-y-6 lg:overflow-y-auto lg:max-h-[600px] pr-2">
+                  {Object.entries(tracksByState)
+                    .sort((a, b) => {
+                      const totalA = a[1].reduce((sum, t) => sum + t.total_deaths, 0)
+                      const totalB = b[1].reduce((sum, t) => sum + t.total_deaths, 0)
+                      return totalB - totalA
+                    })
+                    .map(([state, tracks]) => {
+                      const stateTotal = tracks.reduce((sum, t) => sum + t.total_deaths, 0)
                       return (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-xl border border-border/40 hover:border-destructive/40 transition-all"
-                        >
-                          <div className="flex justify-between mb-2">
-                            <div>
-                              <h3 className="font-bold">{track.name}</h3>
-                              <p className="text-xs text-muted-foreground">
-                                {track.state}
-                              </p>
-                            </div>
-                            <p className="text-2xl font-bold text-destructive">
-                              {track.deaths}
-                            </p>
+                        <div key={state} className="border-l-4 border-destructive/40 pl-4">
+                          <div className="flex justify-between mb-3">
+                            <h3 className="font-bold text-lg text-foreground">{state}</h3>
+                            <p className="text-lg font-bold text-destructive">{stateTotal}</p>
                           </div>
-
-                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-destructive to-accent"
-                              style={{ width: `${pct}%` }}
-                            />
+                          <div className="space-y-2">
+                            {tracks
+                              .sort((a, b) => b.total_deaths - a.total_deaths)
+                              .map((track, idx) => {
+                                const pct = (track.total_deaths / maxDeaths) * 100
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="p-3 rounded-lg border border-border/40 hover:border-destructive/40 transition-all bg-muted/20"
+                                  >
+                                    <div className="flex justify-between mb-2">
+                                      <p className="text-sm font-semibold">{track.name}</p>
+                                      <p className="text-sm font-bold text-destructive">
+                                        {track.total_deaths}
+                                      </p>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-gradient-to-r from-destructive to-accent"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )
+                              })}
                           </div>
                         </div>
                       )
@@ -190,6 +196,8 @@ export default function KillingMapPage() {
             </div>
           </div>
         </section>
+          </>
+        )}
       </main>
 
       <Footer />
